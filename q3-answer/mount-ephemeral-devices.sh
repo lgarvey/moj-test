@@ -4,7 +4,8 @@ BASE_METADATA_URL=http://169.254.169.254/2012-01-12/meta-data/block-device-mappi
 
 # usage: this script can be run via via an instances userdata, or via cloudinit
 
-echo "scanning for devices..."
+echo "scanning for ephemeral devices..."
+mounted=false
 
 for device in $(curl --silent $BASE_METADATA_URL); do
 
@@ -12,7 +13,6 @@ for device in $(curl --silent $BASE_METADATA_URL); do
   # ephemeral disks are mapped as block-device-mapping/ephemeralN
   if [[ $device == ephemeral* ]]; then
     device_id=$(curl --silent $BASE_METADATA_URL/$device)
-    mounted=false
 
     # convert to correct device name, e.g. sda becomes /dev/xvda
     # can device names be in different formats? This may not be 
