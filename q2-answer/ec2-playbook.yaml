@@ -1,0 +1,76 @@
+# create an ssh keypair
+# create an s3 bucket
+# create a security group
+# create an instance profile / iam role
+# create an instance
+# attach an s3 policy to the iam role
+
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    - region: eu-west-2
+    - image: ami-e3051987  #amzn linux
+    - instance_type: t2.micro
+    - local_ip_cidr: 0.0.0.0/0
+    - bucket_name: moj-test-instance-bucket
+  tasks:
+  
+  - ec2_key:  
+      region: "{{ region }}"
+      name: ssh-key
+        
+  - s3_bucket:
+      region: "{{ region }}"
+      name: "{{ bucket_name }}"
+    register: s3_bucket
+    
+  - ec2_group:
+      name: instance-ec2-group
+      description: an example EC2 group
+      region: "{{ region }}"
+      rules:
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: "{{ local_ip_cidr }}"
+      rules_egress:
+        - proto: tcp
+          from_port: 0
+          to_port: 65535
+          cidr_ip: 0.0.0.0/0
+        
+  - iam_role:  
+      assume_role_policy_document: "{{ lookup('file','ec2-trust-policy.json') }}"
+      name: instance_role
+      state: present
+    register: iam_role
+    
+  - name: S3 policy
+    iam_policy:
+      iam_type: role
+      iam_name: instance_role
+      policy_name: "s3-programatic-access"
+      state: present
+      policy_json: " {{ lookup( 'template', 's3-policy.json.j2') |to_json }}"          
+
+  - name: ec2-instances
+    ec2:    
+      keypair: ssh-key
+      state: present
+      instance_type: "{{ instance_type }}"
+      image: "{{ image }}"
+      wait: yes
+      instance_profile_name: instance_role
+      count: 1
+      region: "{{ region }}"
+      group: instance-ec2-group
+    register: ec2
+    
+  - name: Add instances to host group
+    add_host:   
+      hostname="{{ item.public_ip }}"
+      groupname=ec2hosts
+    with_items: "{{ ec2.instances }}"    
+
+
