@@ -1,2 +1,4 @@
 env
 *.pem
+*.sw[a-z0-9]
+.DS_Store

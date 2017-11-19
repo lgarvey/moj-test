@@ -2,8 +2,8 @@
 # create an s3 bucket
 # create a security group
 # create an instance profile / iam role
-# create an instance
 # attach an s3 policy to the iam role
+# create an instance
 
 - hosts: localhost
   connection: local
